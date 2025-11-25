@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Send } from "lucide-react";
 import { z } from "zod";
@@ -17,6 +18,12 @@ const transferSchema = z.object({
   description: z.string().trim().max(200, "Description too long").optional(),
 });
 
+interface AvailableAccount {
+  account_number: string;
+  user_id: string;
+  full_name: string;
+}
+
 const SendMoney = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -24,6 +31,7 @@ const SendMoney = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [accountId, setAccountId] = useState<string>("");
   const [currentBalance, setCurrentBalance] = useState<number>(0);
+  const [availableAccounts, setAvailableAccounts] = useState<AvailableAccount[]>([]);
 
   const [form, setForm] = useState({
     recipientAccount: "",
@@ -40,6 +48,7 @@ const SendMoney = () => {
       }
       setUser(session.user);
       fetchAccountData(session.user.id);
+      fetchAvailableAccounts(session.user.id);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -64,6 +73,45 @@ const SendMoney = () => {
       setCurrentBalance(data.balance);
     } catch (error: any) {
       console.error("Error fetching account:", error);
+    }
+  };
+
+  const fetchAvailableAccounts = async (currentUserId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("accounts")
+        .select(`
+          account_number,
+          user_id,
+          profiles!inner(full_name)
+        `)
+        .neq("user_id", currentUserId);
+
+      if (error) throw error;
+      
+      const formattedAccounts = (data || []).map((account: any) => ({
+        account_number: account.account_number,
+        user_id: account.user_id,
+        full_name: account.profiles.full_name,
+      }));
+      
+      setAvailableAccounts(formattedAccounts);
+    } catch (error: any) {
+      console.error("Error fetching available accounts:", error);
+    }
+  };
+
+  const handleAccountSelect = (accountNumber: string) => {
+    const selectedAccount = availableAccounts.find(
+      (acc) => acc.account_number === accountNumber
+    );
+    
+    if (selectedAccount) {
+      setForm({
+        ...form,
+        recipientAccount: selectedAccount.account_number,
+        recipientName: selectedAccount.full_name,
+      });
     }
   };
 
@@ -139,6 +187,31 @@ const SendMoney = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="accountSelect">Select Recipient (Optional)</Label>
+                <Select onValueChange={handleAccountSelect} disabled={isLoading}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Choose from existing accounts" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    {availableAccounts.length === 0 ? (
+                      <SelectItem value="none" disabled>
+                        No other accounts available
+                      </SelectItem>
+                    ) : (
+                      availableAccounts.map((account) => (
+                        <SelectItem key={account.account_number} value={account.account_number}>
+                          {account.full_name} - {account.account_number}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Or enter account details manually below
+                </p>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="recipientAccount">Recipient Account Number</Label>
                 <Input
