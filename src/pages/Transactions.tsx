@@ -5,6 +5,7 @@ import { User } from "@supabase/supabase-js";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Transaction {
   id: string;
@@ -22,6 +23,42 @@ const Transactions = () => {
   const [user, setUser] = useState<User | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+  const [reversingId, setReversingId] = useState<string | null>(null);
+
+  const isWithinReversalWindow = (createdAt: string) => {
+    const createdTime = new Date(createdAt).getTime();
+    const now = Date.now();
+    const fifteenMinutesMs = 15 * 60 * 1000;
+    return now - createdTime <= fifteenMinutesMs;
+  };
+
+  const handleReversePayment = async (transaction: Transaction) => {
+    setReversingId(transaction.id);
+    try {
+      const { error } = await supabase.functions.invoke("wrong-payment-reversal", {
+        body: { transactionId: transaction.id },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Payment reversed",
+        description: "The amount has been restored to your account.",
+      });
+    } catch (error: any) {
+      console.error("Error reversing transaction:", error);
+      toast({
+        title: "Reversal failed",
+        description: error?.message || "Could not reverse this payment.",
+        variant: "destructive",
+      });
+    } finally {
+      setReversingId(null);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -87,62 +124,84 @@ const Transactions = () => {
               </p>
             ) : (
               <div className="space-y-3">
-                {transactions.map((transaction) => (
-                  <div
-                    key={transaction.id}
-                    className="flex items-start justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-start gap-3 flex-1">
-                      {transaction.type === "credit" ? (
-                        <div className="p-2 rounded-full bg-success/10 mt-1">
-                          <ArrowDownRight className="h-5 w-5 text-success" />
-                        </div>
-                      ) : (
-                        <div className="p-2 rounded-full bg-destructive/10 mt-1">
-                          <ArrowUpRight className="h-5 w-5 text-destructive" />
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <p className="font-medium">
-                          {transaction.description || transaction.recipient_name || "Transaction"}
-                        </p>
-                        {transaction.recipient_name && (
-                          <p className="text-sm text-muted-foreground">
-                            To: {transaction.recipient_name}
-                          </p>
+                {transactions.map((transaction) => {
+                  const isDebit = transaction.type === "debit";
+                  const withinWindow = isWithinReversalWindow(transaction.created_at);
+
+                  return (
+                    <div
+                      key={transaction.id}
+                      className="flex items-start justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-start gap-3 flex-1">
+                        {transaction.type === "credit" ? (
+                          <div className="p-2 rounded-full bg-success/10 mt-1">
+                            <ArrowDownRight className="h-5 w-5 text-success" />
+                          </div>
+                        ) : (
+                          <div className="p-2 rounded-full bg-destructive/10 mt-1">
+                            <ArrowUpRight className="h-5 w-5 text-destructive" />
+                          </div>
                         )}
-                        {transaction.recipient_account && (
-                          <p className="text-sm text-muted-foreground">
-                            Account: {transaction.recipient_account}
+                        <div className="flex-1">
+                          <p className="font-medium">
+                            {transaction.description || transaction.recipient_name || "Transaction"}
                           </p>
-                        )}
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(transaction.created_at).toLocaleString()}
-                          </p>
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded-full ${
-                              transaction.status === "completed"
-                                ? "bg-success/10 text-success"
-                                : transaction.status === "pending"
-                                ? "bg-yellow-500/10 text-yellow-600"
-                                : "bg-destructive/10 text-destructive"
-                            }`}
-                          >
-                            {transaction.status}
-                          </span>
+                          {transaction.recipient_name && (
+                            <p className="text-sm text-muted-foreground">
+                              To: {transaction.recipient_name}
+                            </p>
+                          )}
+                          {transaction.recipient_account && (
+                            <p className="text-sm text-muted-foreground">
+                              Account: {transaction.recipient_account}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 mt-1">
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(transaction.created_at).toLocaleString()}
+                            </p>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full ${
+                                transaction.status === "completed"
+                                  ? "bg-success/10 text-success"
+                                  : transaction.status === "pending"
+                                  ? "bg-yellow-500/10 text-yellow-600"
+                                  : "bg-destructive/10 text-destructive"
+                              }`}
+                            >
+                              {transaction.status}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <p
+                          className={`font-semibold text-lg ${
+                            transaction.type === "credit" ? "text-success" : "text-destructive"
+                          }`}
+                        >
+                          {transaction.type === "credit" ? "+" : "-"}${transaction.amount.toFixed(2)}
+                        </p>
+                        {isDebit && withinWindow && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleReversePayment(transaction)}
+                            disabled={reversingId === transaction.id}
+                          >
+                            {reversingId === transaction.id ? "Reversing..." : "Oops, wrong payment"}
+                          </Button>
+                        )}
+                        {isDebit && !withinWindow && (
+                          <p className="text-xs text-muted-foreground">
+                            Not recoverable (15 min window passed)
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <p
-                      className={`font-semibold text-lg ${
-                        transaction.type === "credit" ? "text-success" : "text-destructive"
-                      }`}
-                    >
-                      {transaction.type === "credit" ? "+" : "-"}${transaction.amount.toFixed(2)}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
