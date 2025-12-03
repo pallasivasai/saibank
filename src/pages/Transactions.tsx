@@ -29,8 +29,8 @@ const Transactions = () => {
   const isWithinReversalWindow = (createdAt: string) => {
     const createdTime = new Date(createdAt).getTime();
     const now = Date.now();
-    const fifteenMinutesMs = 15 * 60 * 1000;
-    return now - createdTime <= fifteenMinutesMs;
+    const thirtyMinutesMs = 30 * 60 * 1000;
+    return now - createdTime <= thirtyMinutesMs;
   };
 
   const handleReversePayment = async (transaction: Transaction) => {
@@ -195,7 +195,7 @@ const Transactions = () => {
                         )}
                         {isDebit && !withinWindow && (
                           <p className="text-xs text-muted-foreground">
-                            Not recoverable (15 min window passed)
+                            Not recoverable (30 min window passed)
                           </p>
                         )}
                       </div>
