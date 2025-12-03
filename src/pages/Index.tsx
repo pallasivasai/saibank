@@ -40,17 +40,22 @@ const Index = () => {
           className="absolute inset-0 w-full h-full object-cover mix-blend-overlay"
         />
         <div className="relative container mx-auto px-4 py-24 lg:py-32">
-          <div className="max-w-3xl mx-auto text-center text-white space-y-8">
+          <div className="max-w-4xl mx-auto text-center text-white space-y-8 animate-fade-in">
+            <p className="inline-flex items-center gap-2 rounded-full bg-black/20 px-4 py-1 text-sm font-medium tracking-wide">
+              <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+              Instant transfers with 30-minute safety window
+            </p>
             <h1 className="text-5xl lg:text-7xl font-bold leading-tight">
               Banking Made Simple
             </h1>
-            <p className="text-xl lg:text-2xl text-white/90">
-              Experience secure, real-time banking with SAI Bank. Your trusted financial partner for the digital age.
+            <p className="text-xl lg:text-2xl text-white/90 max-w-2xl mx-auto">
+              Experience secure, real-time banking with built-in payment protection. If you make a mistake, you have
+              up to <span className="font-semibold">30 minutes</span> to reverse eligible transfers.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 size="lg" 
-                className="bg-white text-primary hover:bg-white/90 text-lg px-8 shadow-elevated"
+                className="bg-white text-primary hover:bg-white/90 text-lg px-8 shadow-elevated hover-scale"
                 onClick={() => navigate("/auth")}
               >
                 Get Started
@@ -58,7 +63,7 @@ const Index = () => {
               <Button 
                 size="lg" 
                 variant="outline" 
-                className="border-white text-white hover:bg-white/10 text-lg px-8"
+                className="border-white text-white hover:bg-white/10 text-lg px-8 hover-scale"
                 onClick={() => navigate("/auth")}
               >
                 Sign In
@@ -71,10 +76,11 @@ const Index = () => {
       {/* Features Section */}
       <section className="py-20 bg-muted/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <div className="text-center mb-16 animate-fade-in">
             <h2 className="text-4xl font-bold mb-4">Why Choose SAI Bank?</h2>
-            <p className="text-xl text-muted-foreground">
-              Modern banking solutions designed for your convenience
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Modern banking with instant transfers, smart insights, and a built-in <span className="font-semibold">30-minute
+              payment reversal</span> safety net for mistaken transfers.
             </p>
           </div>
 

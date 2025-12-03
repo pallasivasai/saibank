@@ -113,9 +113,9 @@ serve(async (req) => {
 
     const createdAt = new Date(transaction.created_at).getTime();
     const now = Date.now();
-    const fifteenMinutesMs = 15 * 60 * 1000;
+    const thirtyMinutesMs = 30 * 60 * 1000;
 
-    if (now - createdAt > fifteenMinutesMs) {
+    if (now - createdAt > thirtyMinutesMs) {
       console.log("Reversal window expired for transaction", transactionId);
       return new Response(
         JSON.stringify({
