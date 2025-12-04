@@ -126,7 +126,7 @@ const Index = () => {
                     <li className="flex items-center justify-between rounded-xl bg-black/20 px-3 py-2">
                       <div>
                         <p className="font-medium">Wrong UPI transfer</p>
-                        <p className="text-xs text-white/70">Reversed within 30 minutes</p>
+                        <p className="text-xs text-white/70">You sent ₹ 2,000 to the wrong account, then reversed it within 30 minutes so the full amount came back to your balance.</p>
                       </div>
                       <span className="text-sm font-semibold text-emerald-300">+₹ 2,000</span>
                     </li>
