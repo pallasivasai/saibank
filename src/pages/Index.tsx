@@ -130,13 +130,6 @@ const Index = () => {
                       </div>
                       <span className="text-sm font-semibold text-emerald-300">+₹ 2,000</span>
                     </li>
-                    <li className="flex items-center justify-between rounded-xl bg-black/10 px-3 py-2">
-                      <div>
-                        <p className="font-medium">Utility bill</p>
-                        <p className="text-xs text-white/70">Settled • Out of reversing window</p>
-                      </div>
-                      <span className="text-sm font-semibold text-white/80">-₹ 1,250</span>
-                    </li>
                   </ul>
 
                   <p className="mt-3 text-[11px] text-white/70">
