@@ -279,7 +279,7 @@ const Index = () => {
       <footer className="bg-card border-t py-8">
         <div className="container mx-auto px-4 text-center text-muted-foreground text-sm">
           <p>
-            &copy; {new Date().getFullYear()} SAI Bank. All rights reserved. Built for a tech industry that expects
+            &copy; 2026 SAI Bank. All rights reserved. Built for a tech industry that expects
             instant payments <span className="font-semibold">and</span> a fair 30-minute reversing standard.
           </p>
         </div>
