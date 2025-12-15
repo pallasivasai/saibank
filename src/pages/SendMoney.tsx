@@ -167,18 +167,33 @@ const SendMoney = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-card shadow-sm">
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Beautiful animated gradient background matching dashboard */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(215,85%,25%)] via-[hsl(215,70%,35%)] to-[hsl(142,76%,30%)]" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 right-20 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute top-1/3 -left-20 w-96 h-96 bg-secondary/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-1/4 w-80 h-80 bg-primary/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute -bottom-20 left-1/3 w-64 h-64 bg-accent/15 rounded-full blur-3xl" />
+        <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] bg-[size:40px_40px]" />
+      </div>
+
+      <header className="relative border-b border-white/10 bg-white/5 backdrop-blur-md shadow-lg">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/dashboard")}
+            className="text-white/80 hover:text-white hover:bg-white/10"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold">Send Money</h1>
+          <h1 className="text-2xl font-bold text-white">Send Money</h1>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
-        <Card className="shadow-elevated">
+      <main className="relative container mx-auto px-4 py-8 max-w-2xl">
+        <Card className="bg-white/10 backdrop-blur-xl border border-white/20 text-white shadow-2xl">
           <CardHeader>
             <CardTitle>Transfer Funds</CardTitle>
             <CardDescription>
