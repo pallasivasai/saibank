@@ -183,11 +183,11 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="flex gap-3">
-                <Button onClick={() => navigate("/send")} className="flex-1 bg-white text-primary hover:bg-white/90">
+                <Button onClick={() => navigate("/send")} className="flex-1 bg-gradient-to-r from-emerald-500 to-teal-400 text-white hover:from-emerald-600 hover:to-teal-500 shadow-lg shadow-emerald-500/30">
                   <Send className="h-4 w-4 mr-2" />
                   Send Money
                 </Button>
-                <Button variant="outline" onClick={() => navigate("/transactions")} className="flex-1 border-white/30 text-white hover:bg-white/10">
+                <Button onClick={() => navigate("/transactions")} className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-500 text-white hover:from-blue-600 hover:to-indigo-600 shadow-lg shadow-blue-500/30">
                   <History className="h-4 w-4 mr-2" />
                   History
                 </Button>
