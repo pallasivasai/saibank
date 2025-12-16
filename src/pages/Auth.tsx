@@ -89,25 +89,34 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary via-primary/90 to-secondary">
-      <Card className="w-full max-w-md shadow-elevated">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Beautiful animated gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[hsl(215,85%,25%)] via-[hsl(215,70%,35%)] to-[hsl(142,76%,30%)]" />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 right-20 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute top-1/3 -left-20 w-96 h-96 bg-secondary/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-1/4 w-80 h-80 bg-primary/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] bg-[size:40px_40px]" />
+      </div>
+
+      <Card className="relative w-full max-w-md bg-white/10 backdrop-blur-xl border-white/20 text-white shadow-2xl">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">SAI Bank</CardTitle>
-          <CardDescription className="text-center">
+          <CardTitle className="text-2xl font-bold text-center text-white">SAI Bank</CardTitle>
+          <CardDescription className="text-center text-white/70">
             Your trusted banking partner
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "login" | "signup")}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 bg-white/10">
+              <TabsTrigger value="login" className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/70">Login</TabsTrigger>
+              <TabsTrigger value="signup" className="data-[state=active]:bg-white/20 data-[state=active]:text-white text-white/70">Sign Up</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
+                  <Label htmlFor="login-email" className="text-white/90">Email</Label>
                   <Input
                     id="login-email"
                     type="email"
@@ -116,10 +125,11 @@ const Auth = () => {
                     onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                     required
                     disabled={isLoading}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
+                  <Label htmlFor="login-password" className="text-white/90">Password</Label>
                   <Input
                     id="login-password"
                     type="password"
@@ -127,9 +137,10 @@ const Auth = () => {
                     onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                     required
                     disabled={isLoading}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full bg-gradient-to-r from-emerald-500 to-teal-400 text-white hover:from-emerald-600 hover:to-teal-500" disabled={isLoading}>
                   {isLoading ? "Logging in..." : "Login"}
                 </Button>
               </form>
@@ -138,7 +149,7 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
+                  <Label htmlFor="signup-name" className="text-white/90">Full Name</Label>
                   <Input
                     id="signup-name"
                     type="text"
@@ -147,10 +158,11 @@ const Auth = () => {
                     onChange={(e) => setSignupForm({ ...signupForm, fullName: e.target.value })}
                     required
                     disabled={isLoading}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email" className="text-white/90">Email</Label>
                   <Input
                     id="signup-email"
                     type="email"
@@ -159,10 +171,11 @@ const Auth = () => {
                     onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
                     required
                     disabled={isLoading}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password" className="text-white/90">Password</Label>
                   <Input
                     id="signup-password"
                     type="password"
@@ -171,9 +184,10 @@ const Auth = () => {
                     onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
                     required
                     disabled={isLoading}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button type="submit" className="w-full bg-gradient-to-r from-emerald-500 to-teal-400 text-white hover:from-emerald-600 hover:to-teal-500" disabled={isLoading}>
                   {isLoading ? "Creating account..." : "Create Account"}
                 </Button>
               </form>
@@ -181,7 +195,7 @@ const Auth = () => {
           </Tabs>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-white/60">
             Secure banking made simple
           </p>
         </CardFooter>
