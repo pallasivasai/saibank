@@ -195,7 +195,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-xl border-white/20 text-white shadow-2xl">
+          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 text-white shadow-2xl">
             <CardHeader>
               <CardDescription className="text-white/70">
                 Account Type
