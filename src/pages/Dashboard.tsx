@@ -59,12 +59,33 @@ const Dashboard = () => {
   }, [navigate]);
 
   useEffect(() => {
-    if (user) {
-      fetchAccountData();
-      fetchTransactions();
-      subscribeToTransactions();
-    }
+    if (!user) return;
+
+    fetchAccountData();
+    fetchTransactions();
+
+    const channel = supabase
+      .channel(`transactions-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "transactions",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          setTransactions((prev) => [payload.new as Transaction, ...prev].slice(0, 5));
+          fetchAccountData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
+
 
   const fetchAccountData = async () => {
     try {
@@ -99,28 +120,8 @@ const Dashboard = () => {
     }
   };
 
-  const subscribeToTransactions = () => {
-    const channel = supabase
-      .channel("transactions")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "transactions",
-          filter: `user_id=eq.${user?.id}`,
-        },
-        (payload) => {
-          setTransactions((prev) => [payload.new as Transaction, ...prev].slice(0, 5));
-          fetchAccountData();
-        }
-      )
-      .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
+
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
