@@ -20,7 +20,10 @@ serve(async (req) => {
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const supabaseAnonKey =
+    Deno.env.get("SUPABASE_ANON_KEY") ??
+    Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ??
+    Deno.env.get("SUPABASE_PUBLISHABLE_DEFAULT_KEY");
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error("Missing Supabase environment variables", {
@@ -120,7 +123,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           error: "time_window_passed",
-          message: "This payment can no longer be reversed (over 15 minutes).",
+          message: "This payment can no longer be reversed (30 minute window passed).",
         }),
         {
           status: 400,
