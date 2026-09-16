@@ -138,6 +138,11 @@ const Transactions = () => {
                 {transactions.map((transaction) => {
                   const isDebit = transaction.type === "debit";
                   const withinWindow = isWithinReversalWindow(transaction.created_at);
+                  const isReversible =
+                    isDebit &&
+                    !transaction.is_reversal &&
+                    !transaction.reversed_at &&
+                    withinWindow;
 
                   return (
                     <div
@@ -194,19 +199,27 @@ const Transactions = () => {
                         >
                           {transaction.type === "credit" ? "+" : "-"}${transaction.amount.toFixed(2)}
                         </p>
-                        {isDebit && withinWindow && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleReversePayment(transaction)}
-                            disabled={reversingId === transaction.id}
-                          >
-                            {reversingId === transaction.id ? "Reversing..." : "Oops, wrong payment"}
-                          </Button>
+                        {isReversible && (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleReversePayment(transaction)}
+                              disabled={reversingId === transaction.id}
+                            >
+                              {reversingId === transaction.id ? "Reversing..." : "Oops, wrong payment"}
+                            </Button>
+                            <p className="text-xs text-muted-foreground">
+                              {timeLeftLabel(transaction.created_at)}
+                            </p>
+                          </>
                         )}
-                        {isDebit && !withinWindow && (
+                        {isDebit && !transaction.is_reversal && transaction.reversed_at && (
+                          <p className="text-xs text-success">Reversed - amount restored</p>
+                        )}
+                        {isDebit && !transaction.is_reversal && !transaction.reversed_at && !withinWindow && (
                           <p className="text-xs text-muted-foreground">
-                            Not recoverable (30 min window passed)
+                            Not recoverable (24 hour window passed)
                           </p>
                         )}
                       </div>
