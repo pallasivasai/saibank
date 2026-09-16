@@ -58,21 +58,33 @@ const Index = () => {
               </p>
 
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <Button
-                  size="lg"
-                  className="hover-scale bg-white text-primary hover:bg-white/90 text-lg px-8 shadow-elevated"
-                  onClick={() => navigate("/auth")}
-                >
-                  Get Started in Minutes
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="hover-scale border-white/70 bg-transparent text-white hover:bg-white/10 text-lg px-8"
-                  onClick={() => navigate("/auth")}
-                >
-                  Sign In
-                </Button>
+                {user ? (
+                  <Button
+                    size="lg"
+                    className="hover-scale bg-white text-primary hover:bg-white/90 text-lg px-8 shadow-elevated"
+                    onClick={() => navigate("/dashboard")}
+                  >
+                    Go to Dashboard
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      size="lg"
+                      className="hover-scale bg-white text-primary hover:bg-white/90 text-lg px-8 shadow-elevated"
+                      onClick={() => navigate("/auth")}
+                    >
+                      Get Started in Minutes
+                    </Button>
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="hover-scale border-white/70 bg-transparent text-white hover:bg-white/10 text-lg px-8"
+                      onClick={() => navigate("/auth")}
+                    >
+                      Sign In
+                    </Button>
+                  </>
+                )}
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-white/80">
