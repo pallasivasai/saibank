@@ -21,7 +21,9 @@ export type Database = {
           balance: number
           created_at: string
           currency: string
+          frozen_reason: string | null
           id: string
+          is_frozen: boolean
           updated_at: string
           user_id: string
         }
@@ -31,7 +33,9 @@ export type Database = {
           balance?: number
           created_at?: string
           currency?: string
+          frozen_reason?: string | null
           id?: string
+          is_frozen?: boolean
           updated_at?: string
           user_id: string
         }
@@ -41,7 +45,9 @@ export type Database = {
           balance?: number
           created_at?: string
           currency?: string
+          frozen_reason?: string | null
           id?: string
+          is_frozen?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -86,9 +92,12 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_reversal: boolean
           recipient_account: string | null
           recipient_name: string | null
+          reversed_at: string | null
           status: string
+          transfer_group: string | null
           type: string
           user_id: string
         }
@@ -98,9 +107,12 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_reversal?: boolean
           recipient_account?: string | null
           recipient_name?: string | null
+          reversed_at?: string | null
           status?: string
+          transfer_group?: string | null
           type: string
           user_id: string
         }
@@ -110,9 +122,12 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_reversal?: boolean
           recipient_account?: string | null
           recipient_name?: string | null
+          reversed_at?: string | null
           status?: string
+          transfer_group?: string | null
           type?: string
           user_id?: string
         }
@@ -138,7 +153,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      reverse_transaction: { Args: { p_transaction_id: string }; Returns: Json }
+      transfer_money: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_recipient_account: string
+          p_recipient_name: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

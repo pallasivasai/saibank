@@ -32,6 +32,8 @@ const SendMoney = () => {
   const [accountId, setAccountId] = useState<string>("");
   const [currentBalance, setCurrentBalance] = useState<number>(0);
   const [availableAccounts, setAvailableAccounts] = useState<AvailableAccount[]>([]);
+  const [isFrozen, setIsFrozen] = useState(false);
+  const [frozenReason, setFrozenReason] = useState("");
 
   const [form, setForm] = useState({
     recipientAccount: "",
@@ -64,13 +66,15 @@ const SendMoney = () => {
     try {
       const { data, error } = await supabase
         .from("accounts")
-        .select("id, balance")
+        .select("id, balance, is_frozen, frozen_reason")
         .eq("user_id", userId)
         .single();
 
       if (error) throw error;
       setAccountId(data.id);
-      setCurrentBalance(data.balance);
+      setCurrentBalance(Number(data.balance));
+      setIsFrozen(!!data.is_frozen);
+      setFrozenReason(data.frozen_reason ?? "");
     } catch (error: any) {
       console.error("Error fetching account:", error);
     }
@@ -129,29 +133,18 @@ const SendMoney = () => {
         throw new Error("Insufficient balance");
       }
 
-      const { error: transactionError } = await supabase.from("transactions").insert({
-        account_id: accountId,
-        user_id: user?.id,
-        type: "debit",
-        amount: validated.amount,
-        recipient_account: validated.recipientAccount,
-        recipient_name: validated.recipientName,
-        description: validated.description || "Money transfer",
-        status: "completed",
+      const { error: transferError } = await supabase.rpc("transfer_money", {
+        p_recipient_account: validated.recipientAccount,
+        p_recipient_name: validated.recipientName,
+        p_amount: validated.amount,
+        p_description: validated.description || null,
       });
 
-      if (transactionError) throw transactionError;
-
-      const { error: updateError } = await supabase
-        .from("accounts")
-        .update({ balance: currentBalance - validated.amount })
-        .eq("id", accountId);
-
-      if (updateError) throw updateError;
+      if (transferError) throw new Error(transferError.message);
 
       toast({
         title: "Transfer successful!",
-        description: `$${validated.amount.toFixed(2)} sent to ${validated.recipientName}`,
+        description: `$${validated.amount.toFixed(2)} sent to ${validated.recipientName}. You can reverse it within 24 hours if it was a mistake.`,
       });
 
       navigate("/dashboard");
@@ -201,6 +194,15 @@ const SendMoney = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {isFrozen && (
+              <div className="mb-6 rounded-lg border border-destructive/40 bg-destructive/20 p-4">
+                <p className="font-semibold">Account frozen</p>
+                <p className="text-sm text-white/80">
+                  {frozenReason ||
+                    "Your account is frozen because of a negative balance. Any money you receive will first clear the negative amount, and the freeze lifts automatically once the balance reaches zero."}
+                </p>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="accountSelect">Select Recipient (Optional)</Label>
