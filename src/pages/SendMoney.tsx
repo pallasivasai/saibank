@@ -129,29 +129,18 @@ const SendMoney = () => {
         throw new Error("Insufficient balance");
       }
 
-      const { error: transactionError } = await supabase.from("transactions").insert({
-        account_id: accountId,
-        user_id: user?.id,
-        type: "debit",
-        amount: validated.amount,
-        recipient_account: validated.recipientAccount,
-        recipient_name: validated.recipientName,
-        description: validated.description || "Money transfer",
-        status: "completed",
+      const { error: transferError } = await supabase.rpc("transfer_money", {
+        p_recipient_account: validated.recipientAccount,
+        p_recipient_name: validated.recipientName,
+        p_amount: validated.amount,
+        p_description: validated.description || null,
       });
 
-      if (transactionError) throw transactionError;
-
-      const { error: updateError } = await supabase
-        .from("accounts")
-        .update({ balance: currentBalance - validated.amount })
-        .eq("id", accountId);
-
-      if (updateError) throw updateError;
+      if (transferError) throw new Error(transferError.message);
 
       toast({
         title: "Transfer successful!",
-        description: `$${validated.amount.toFixed(2)} sent to ${validated.recipientName}`,
+        description: `$${validated.amount.toFixed(2)} sent to ${validated.recipientName}. You can reverse it within 24 hours if it was a mistake.`,
       });
 
       navigate("/dashboard");
