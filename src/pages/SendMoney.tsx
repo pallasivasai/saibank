@@ -194,6 +194,15 @@ const SendMoney = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {isFrozen && (
+              <div className="mb-6 rounded-lg border border-destructive/40 bg-destructive/20 p-4">
+                <p className="font-semibold">Account frozen</p>
+                <p className="text-sm text-white/80">
+                  {frozenReason ||
+                    "Your account is frozen because of a negative balance. Any money you receive will first clear the negative amount, and the freeze lifts automatically once the balance reaches zero."}
+                </p>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="accountSelect">Select Recipient (Optional)</Label>

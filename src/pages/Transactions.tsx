@@ -26,28 +26,39 @@ const Transactions = () => {
   const { toast } = useToast();
   const [reversingId, setReversingId] = useState<string | null>(null);
 
+  const REVERSAL_WINDOW_MS = 24 * 60 * 60 * 1000;
+
   const isWithinReversalWindow = (createdAt: string) => {
-    const createdTime = new Date(createdAt).getTime();
-    const now = Date.now();
-    const thirtyMinutesMs = 30 * 60 * 1000;
-    return now - createdTime <= thirtyMinutesMs;
+    return Date.now() - new Date(createdAt).getTime() <= REVERSAL_WINDOW_MS;
+  };
+
+  const timeLeftLabel = (createdAt: string) => {
+    const msLeft = REVERSAL_WINDOW_MS - (Date.now() - new Date(createdAt).getTime());
+    if (msLeft <= 0) return "";
+    const hours = Math.floor(msLeft / (60 * 60 * 1000));
+    const minutes = Math.floor((msLeft % (60 * 60 * 1000)) / (60 * 1000));
+    return hours > 0 ? `${hours}h ${minutes}m left to reverse` : `${minutes}m left to reverse`;
   };
 
   const handleReversePayment = async (transaction: Transaction) => {
     setReversingId(transaction.id);
     try {
-      const { error } = await supabase.functions.invoke("wrong-payment-reversal", {
-        body: { transactionId: transaction.id },
+      const { data, error } = await supabase.rpc("reverse_transaction", {
+        p_transaction_id: transaction.id,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw new Error(error.message);
+
+      const result = (data ?? {}) as { recipient_frozen?: boolean };
 
       toast({
         title: "Payment reversed",
-        description: "The amount has been restored to your account.",
+        description: result.recipient_frozen
+          ? "The amount is back in your account. The receiver had already withdrawn it, so their account is now negative and frozen until it is cleared."
+          : "The amount has been restored to your account.",
       });
+
+      if (user) fetchTransactions(user.id);
     } catch (error: any) {
       console.error("Error reversing transaction:", error);
       toast({
