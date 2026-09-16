@@ -16,6 +16,8 @@ interface Transaction {
   recipient_name?: string;
   recipient_account?: string;
   status: string;
+  reversed_at?: string | null;
+  is_reversal?: boolean;
 }
 
 const Transactions = () => {
