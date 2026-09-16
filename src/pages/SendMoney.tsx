@@ -32,6 +32,8 @@ const SendMoney = () => {
   const [accountId, setAccountId] = useState<string>("");
   const [currentBalance, setCurrentBalance] = useState<number>(0);
   const [availableAccounts, setAvailableAccounts] = useState<AvailableAccount[]>([]);
+  const [isFrozen, setIsFrozen] = useState(false);
+  const [frozenReason, setFrozenReason] = useState("");
 
   const [form, setForm] = useState({
     recipientAccount: "",
@@ -64,13 +66,15 @@ const SendMoney = () => {
     try {
       const { data, error } = await supabase
         .from("accounts")
-        .select("id, balance")
+        .select("id, balance, is_frozen, frozen_reason")
         .eq("user_id", userId)
         .single();
 
       if (error) throw error;
       setAccountId(data.id);
-      setCurrentBalance(data.balance);
+      setCurrentBalance(Number(data.balance));
+      setIsFrozen(!!data.is_frozen);
+      setFrozenReason(data.frozen_reason ?? "");
     } catch (error: any) {
       console.error("Error fetching account:", error);
     }
