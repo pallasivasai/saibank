@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789526999037,
+      "tag": "0000_transfer_and_24h_reversal_with_freeze",
+      "breakpoints": true
+    }
+  ]
+}
