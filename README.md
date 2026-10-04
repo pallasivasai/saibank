@@ -19,7 +19,7 @@ SAI Bank is a demo digital‑banking web app built with React, Vite, TypeScript,
   - Or manually enter **recipient account number** and **recipient name**.  
   - Enter **amount** and optional **description**.  
   - Client‑side validation with Zod.  
-  - Creates a `debit` transaction and updates the sender’s account balance.
+  - Transfer is processed through the database `transfer_money()` function, which debits the sender and credits the recipient while creating linked ledger entries.
 
 - **Transaction History** (`/transactions`)
   - Full list of the user’s transactions (credits & debits).  
@@ -27,30 +27,345 @@ SAI Bank is a demo digital‑banking web app built with React, Vite, TypeScript,
   - Shows description, recipient details, status, amount, and timestamp.  
   - For eligible debits, shows an **“Oops, wrong payment”** button.
 
-- **30‑Minute Payment Reversing**
-  - For outbound **debit** transactions:
-    - Within **30 minutes** of creation, a button **“Oops, wrong payment”** appears in the Transactions list.
-    - When clicked, it calls a backend function that:
-      1. Verifies the user owns the transaction and account.  
-      2. Checks the transaction is a `debit`.  
-      3. Enforces a strict **30‑minute limit** based on the original `created_at` timestamp.  
-      4. Updates the account balance by re‑crediting the amount.  
-      5. Inserts a compensating `credit` transaction (tagged as a reversal).
-    - After 30 minutes, the button disappears and a label shows:  
-      _“Not recoverable (30 min window passed)”_.
+- **Payment Reversing**
+  - The current application UI exposes the **“Oops, wrong payment”** recovery action for eligible outbound **debit** transactions.  
+  - The database recovery procedure implements a **24‑hour recovery window**.
+  - A recovery can:
+    1. Verify the authenticated user owns the transaction.
+    2. Verify the original transaction is an outgoing `debit`.
+    3. Check that it has not already been reversed.
+    4. Enforce the 24‑hour limit using `created_at`.
+    5. Debit the recipient by the original amount.
+    6. Credit the sender by the original amount.
+    7. Mark linked transaction records as reversed.
+    8. Insert compensating reversal ledger entries.
+  - When the recipient has already withdrawn the funds, the recipient balance can become negative and the database trigger freezes that account.
 
 ---
 
-## Why 30‑Minute Payment Reversing Matters
+## Why Payment Reversing Matters
 
-In real‑world fintech systems, **short error‑correction windows** are critical for:
+A time‑boxed error‑correction workflow demonstrates how a banking system can keep transfers fast while still giving users a controlled recovery path.
 
-- **User trust & safety** – People occasionally send money to the wrong person or wrong amount. A 30‑minute window offers a clear, predictable way to self‑correct without opening a formal dispute.
-- **Reduced support load** – Many “wrong payment” tickets can be resolved by customers directly in‑app instead of manual back‑office intervention.
-- **Compliance & auditability** – Explicit reversal flows with well‑defined time limits and clear transaction records make it easier to explain system behavior to auditors and stakeholders.
-- **Better UX than hard irreversibility** – Instant transfers stay fast, but mistakes within the 30‑minute window can still be fixed in a controlled, auditable way.
+This project demonstrates:
 
-This project demonstrates how a **time‑boxed reversal mechanism** can be implemented end‑to‑end: UI affordance, backend validation, and proper accounting entries.
+- **User safety** – structured recovery for mistaken outgoing payments.
+- **Database integrity** – sender and recipient balances are updated together through database logic.
+- **Transaction traceability** – related records are connected with `transfer_group`.
+- **Negative‑balance handling** – a recovery can safely represent a recipient who already spent the funds.
+- **Account controls** – negative balances trigger an automatic freeze until the balance is cleared.
+- **Auditability** – original records are marked reversed and compensating entries are recorded.
+
+---
+
+## 📸 Live Project Evidence
+
+The following screenshots show the actual working transaction and recovery flow.
+
+### Transaction History — Reversed Payment
+![SAI Bank Transaction History – Reversed Payment](https://saibank.lovable.app/transactions)
+
+> The transaction history demonstrates a debit marked as reversed and a compensating credit showing that the amount was restored.
+
+### Reversal Window — Eligible Payment
+![SAI Bank Reversal Window](https://saibank.lovable.app/transactions)
+
+> An eligible debit displays **“Oops, wrong payment”** together with the remaining recovery time in the live application.
+
+### Dashboard — Transaction Ledger
+![SAI Bank Dashboard Transactions](https://saibank.lovable.app/dashboard)
+
+> The dashboard shows recent outgoing and incoming ledger activity, including reversal-related entries.
+
+> **Repository:** https://github.com/pallasivasai/saibank  
+> **Live app:** https://saibank.lovable.app/
+
+---
+
+## 🗄️ Database Design Architecture
+
+The project is database‑first: the UI calls database procedures, balances are maintained in the `accounts` table, and financial history is recorded in the `transactions` ledger.
+
+### Schema Relationship Diagram
+
+```text
+                    AUTH.USERS
+                        |
+                        | 1 : 1
+                        v
+                    PROFILES
+                 (id, name, phone)
+                        |
+                        | 1 : many
+                        v
+                     ACCOUNTS
+        +--------------------------------------+
+        | id                                   |
+        | user_id -> profiles.id               |
+        | account_number                       |
+        | account_type                         |
+        | balance                              |
+        | currency                             |
+        | is_frozen / frozen_reason            |
+        +------------------+-------------------+
+                           |
+                           | 1 : many
+                           v
+                    TRANSACTIONS
+        +--------------------------------------+
+        | id                                   |
+        | account_id -> accounts.id            |
+        | user_id -> profiles.id               |
+        | type = debit / credit / transfer     |
+        | amount                               |
+        | recipient_account                    |
+        | recipient_name                       |
+        | description                          |
+        | status                               |
+        | transfer_group                       |
+        | is_reversal                          |
+        | reversed_at                          |
+        | created_at                           |
+        +--------------------------------------+
+```
+
+**Important database relationship:** `transfer_group` logically links the sender and recipient ledger entries belonging to the same transfer. It is not a separate physical `transfers` table in the current schema.
+
+### Database Logic Flow
+
+```
+                USER
+                 |
+                 v
+       React / TypeScript UI
+                 |
+                 v
+        Supabase RPC Layer
+                 |
+        +--------+---------+
+        |                  |
+        v                  v
+ transfer_money()   reverse_transaction()
+        |                  |
+        v                  v
+    POSTGRESQL DATABASE / LEDGER
+        |
+        +--> accounts
+        +--> profiles
+        +--> transactions
+        +--> triggers / RLS
+```
+
+---
+
+## 🔄 Transfer Processing Architecture
+
+```
+User selects recipient + amount
+             |
+             v
+      transfer_money()
+             |
+             +--> auth.uid()
+             |
+             +--> Lock sender row
+             |
+             +--> Check frozen status
+             |
+             +--> Check sufficient balance
+             |
+             +--> Lock recipient row
+             |
+             +--> Prevent self-transfer
+             |
+             +--> Sender balance -= amount
+             |
+             +--> Recipient balance += amount
+             |
+             +--> Insert sender DEBIT
+             |
+             +--> Insert recipient CREDIT
+             |
+             +--> Same transfer_group links both
+             |
+             v
+       Transaction Ledger
+```
+
+The database procedure uses `FOR UPDATE` row locking for sender and recipient accounts, so the transfer logic is designed around consistent account updates and linked ledger records.
+
+---
+
+## ↩️ Wrong-Payment Recovery Architecture
+
+```
+User clicks "Oops, wrong payment"
+              |
+              v
+     reverse_transaction()
+              |
+              +--> Authenticate caller
+              |
+              +--> Find owned DEBIT
+              |
+              +--> Reject if already reversed
+              |
+              +--> Enforce 24-hour window
+              |
+              +--> Lock sender account
+              |
+              +--> Lock recipient account
+              |
+              +--> Debit recipient
+              |       |
+              |       +--> Enough balance
+              |       |       -> recipient stays >= 0
+              |       |
+              |       +--> Insufficient balance
+              |               -> recipient becomes negative
+              |                        |
+              |                        v
+              |                account freeze trigger
+              |
+              +--> Credit sender
+              |
+              +--> Mark original transfer REVERSED
+              |
+              +--> Mark linked recipient credit REVERSED
+              |
+              +--> Insert sender reversal CREDIT
+              |
+              +--> Insert recipient reversal DEBIT
+              |
+              v
+          Updated Ledger
+```
+
+---
+
+## 🧪 Case Studies
+
+### Case Study 1 — Recipient Still Has Enough Money
+
+**Scenario:** A sender transfers **$15,000** by mistake. The recipient still has enough balance when the sender requests recovery.
+
+```
+BEFORE TRANSFER
+Sender:    $20,000
+Recipient: $20,000
+
+TRANSFER
+Sender  ---------------- $15,000 ----------------> Recipient
+
+AFTER TRANSFER
+Sender:    $5,000
+Recipient: $35,000
+
+AFTER RECOVERY
+Sender:    $20,000
+Recipient: $20,000
+```
+
+**Database result**
+
+- Sender original debit → `status = reversed`
+- Recipient original credit → `status = reversed`
+- Sender receives a reversal `credit`
+- Recipient receives a reversal `debit`
+- `transfer_group` keeps the related entries traceable
+
+---
+
+### Case Study 2 — Recipient Already Withdrew / Spent the Money
+
+**Scenario:** The sender requests recovery after the recipient has already spent or withdrawn the transferred funds.
+
+```
+BEFORE TRANSFER
+Sender:    $20,000
+Recipient: $20,000
+
+AFTER $15,000 TRANSFER
+Sender:    $5,000
+Recipient: $35,000
+
+Recipient spends / withdraws $30,000
+Sender:    $5,000
+Recipient: $5,000
+
+RECOVERY REQUEST
+Sender receives the original $15,000 back
+Recipient balance becomes:
+
+$5,000 - $15,000 = -$10,000
+```
+
+### Negative-Balance Recovery Logic
+
+```
+Recipient balance
+      |
+      v
+$5,000 - $15,000
+      |
+      v
+   -$10,000
+      |
+      v
+BEFORE UPDATE trigger
+      |
+      v
+is_frozen = true
+frozen_reason = negative balance after recovery
+      |
+      v
+Recipient cannot send money
+      |
+      v
+Future incoming money clears deficit
+      |
+      v
+Balance >= $0
+      |
+      v
+Freeze removed
+```
+
+This is an important database case because the system does **not** need to pretend the money is still available in the recipient account. Instead, the recovery is represented explicitly through a negative balance plus an account-control state.
+
+---
+
+### Case Study 3 — Recovery Window Expired
+
+```
+TRANSACTION CREATED
+       |
+       v
+0h ----------- recovery allowed ----------- 24h
+                                                   |
+                                                   v
+                                      recovery rejected
+```
+
+The current database procedure rejects recovery when `now() - created_at > INTERVAL '24 hours'`.
+
+---
+
+## 🛡️ Database Security & Integrity Controls
+
+| Control | Implementation in project |
+|---|---|
+| Authentication | `auth.uid()` identifies the caller |
+| Row-Level Security | RLS policies protect profiles, accounts and transactions |
+| Ownership validation | Recovery checks the transaction and sender account owner |
+| Row locking | `FOR UPDATE` locks sender and recipient rows |
+| Balance validation | Rejects non-positive amounts and insufficient sender funds |
+| Self-transfer protection | Prevents sending money to the same account |
+| Recovery window | 24-hour database-side time check |
+| Duplicate recovery protection | `reversed_at` + `is_reversal` |
+| Transfer linkage | `transfer_group` |
+| Negative balance handling | Trigger freezes a negative recipient account |
+| Audit trail | Reversed source records + compensating ledger entries |
 
 ---
 
@@ -61,32 +376,35 @@ This project demonstrates how a **time‑boxed reversal mechanism** can be imple
 - Tailwind CSS for utility‑first styling
 - shadcn‑ui components (Buttons, Cards, Inputs, Select, etc.)
 - Custom pages:
-  - `src/pages/Index.tsx` – marketing / landing (“Banking Made Simple”), highlights the 30‑minute safety window
+  - `src/pages/Index.tsx` – marketing / landing (“Banking Made Simple”)
   - `src/pages/Auth.tsx` – authentication UI
   - `src/pages/Dashboard.tsx` – main account overview
   - `src/pages/SendMoney.tsx` – money transfer form with recipient dropdown
-  - `src/pages/Transactions.tsx` – full history + "Oops, wrong payment" reversal action
+  - `src/pages/Transactions.tsx` – full history + reversal action
 
 **Backend (Lovable Cloud)**
 - Managed Postgres database with these main tables:
-  - `accounts` – one or more accounts per user (balance, account number, type)
+  - `accounts` – one or more accounts per user (balance, account number, type, freeze state)
   - `profiles` – user profile metadata (full name, phone)
   - `transactions` – ledger of debits and credits for each user/account
-- Row‑Level Security (RLS) to ensure users only interact with their own data where appropriate.
+- Row‑Level Security (RLS) for authenticated data access.
 - Auto‑generated TypeScript types in `src/integrations/supabase/types.ts`.
 
-**Edge Function for Payment Reversing**
-- `supabase/functions/wrong-payment-reversal/index.ts` implements the 30‑minute reversal logic:
-  - Authenticates the caller using the bearer token.
-  - Fetches the target transaction and validates:
-    - Ownership (`transaction.user_id === currentUserId`)
-    - Type is `debit`
-    - `now - created_at <= 30 minutes`
-  - Checks that a reversal has not already been created (via a special description marker).  
-  - Updates the `accounts` table to credit the amount back.  
-  - Inserts a new `credit` transaction to record the reversal.
+**Database Functions**
+- `transfer_money()` performs atomic sender/recipient balance updates and inserts linked debit/credit ledger entries.
+- `reverse_transaction()` performs 24-hour wrong-payment recovery, marks linked records reversed, restores the sender, and can freeze a recipient whose balance becomes negative.
 
-The Transactions page calls this edge function using `supabase.functions.invoke("wrong-payment-reversal", { body: { transactionId } })`.
+---
+
+## Key Files to Explore
+
+- **Landing & marketing:** `src/pages/Index.tsx`
+- **Send money UX:** `src/pages/SendMoney.tsx`
+- **Transaction history:** `src/pages/Transactions.tsx`
+- **Database schema:** `supabase/migrations/20251124144103_42d0ffa9-ef97-4422-863c-ed276f9c8fcb.sql`
+- **Transfer & recovery SQL:** `drizzle/migrations/0000_transfer_and_24h_reversal_with_freeze.sql`
+- **Reversed status migration:** `drizzle/migrations/0001_allow_reversed_status.sql`
+- **Legacy edge function:** `supabase/functions/wrong-payment-reversal/index.ts`
 
 ---
 
@@ -96,15 +414,15 @@ The Transactions page calls this edge function using `supabase.functions.invoke(
 
 ### Prerequisites
 
-- Node.js and npm installed (Node 18+ recommended)  
-  You can install via [nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+- Node.js and npm installed (Node 18+ recommended)
+- nvm is also supported: https://github.com/nvm-sh/nvm#installing-and-updating
 
 ### Setup
 
 ```bash
 # 1. Clone the repository
-git clone <YOUR_GIT_URL>
-cd <YOUR_PROJECT_NAME>
+git clone https://github.com/pallasivasai/saibank.git
+cd saibank
 
 # 2. Install dependencies
 npm install
@@ -118,29 +436,12 @@ npm run dev
 
 ### Environment Variables
 
-When running inside Lovable Cloud, environment variables (backend URL, keys, etc.) are already configured.  
-If you want to run this project fully outside Lovable, you’ll need a compatible backend and to configure at least:
+When running inside Lovable Cloud, environment variables are already configured.
 
-- `VITE_SUPABASE_URL` – URL of your backend project
-- `VITE_SUPABASE_PUBLISHABLE_KEY` – public client key
+For external local development, configure:
 
-These are read by `src/integrations/supabase/client.ts` to create the client used throughout the app.
-
----
-
-## Key Files to Explore
-
-- **Landing & marketing:** `src/pages/Index.tsx`  
-  Highlights instant transfers and the 30‑minute payment protection window.
-
-- **Send money UX:** `src/pages/SendMoney.tsx`  
-  Validates input, lets users select recipients, and records debit transactions.
-
-- **Reversal UX:** `src/pages/Transactions.tsx`  
-  Shows history and exposes the **“Oops, wrong payment”** action for eligible debits. The label changes when the 30‑minute window has passed.
-
-- **Reversal logic (backend):** `supabase/functions/wrong-payment-reversal/index.ts`  
-  Guards reversal with ownership, type, and 30‑minute time checks; updates balances and creates compensating transactions.
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
 
 ---
 
@@ -148,8 +449,17 @@ These are read by `src/integrations/supabase/client.ts` to create the client use
 
 If you’re using Lovable:
 
-1. Open the project in Lovable.  
-2. Click **Share → Publish**.  
-3. Frontend changes go live after you click **Update** in the publish dialog. Backend changes (database, edge functions) deploy automatically.
+1. Open the project in Lovable.
+2. Click **Share → Publish**.
+3. Frontend changes go live after you click **Update** in the publish dialog.
+4. Database / backend changes are deployed through the project backend.
 
 You can optionally connect a custom domain under **Project → Settings → Domains**.
+
+---
+
+## Project Links
+
+- **GitHub:** https://github.com/pallasivasai/saibank
+- **Live application:** https://saibank.lovable.app/
+- **Transaction history:** https://saibank.lovable.app/transactions
