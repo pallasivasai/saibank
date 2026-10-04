@@ -190,7 +190,7 @@ const SendMoney = () => {
           <CardHeader>
             <CardTitle>Transfer Funds</CardTitle>
             <CardDescription>
-              Available Balance: <span className="font-semibold text-foreground">${currentBalance.toFixed(2)}</span>
+              Available Balance: <span className="font-semibold text-white">${currentBalance.toFixed(2)}</span>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -207,7 +207,7 @@ const SendMoney = () => {
               <div className="space-y-2">
                 <Label htmlFor="accountSelect">Select Recipient (Optional)</Label>
                 <Select onValueChange={handleAccountSelect} disabled={isLoading}>
-                  <SelectTrigger className="bg-background">
+                  <SelectTrigger className="bg-background text-foreground">
                     <SelectValue placeholder="Choose from existing accounts" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50">
@@ -224,14 +224,14 @@ const SendMoney = () => {
                     )}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-white/70">
                   Or enter account details manually below
                 </p>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="recipientAccount">Recipient Account Number</Label>
-                <Input
+                <Input className="bg-background text-foreground placeholder:text-muted-foreground"
                   id="recipientAccount"
                   placeholder="SAI123456789"
                   value={form.recipientAccount}
@@ -243,7 +243,7 @@ const SendMoney = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="recipientName">Recipient Name</Label>
-                <Input
+                <Input className="bg-background text-foreground placeholder:text-muted-foreground"
                   id="recipientName"
                   placeholder="John Doe"
                   value={form.recipientName}
@@ -255,7 +255,7 @@ const SendMoney = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="amount">Amount</Label>
-                <Input
+                <Input className="bg-background text-foreground placeholder:text-muted-foreground"
                   id="amount"
                   type="number"
                   step="0.01"
@@ -269,7 +269,7 @@ const SendMoney = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="description">Description (Optional)</Label>
-                <Input
+                <Input className="bg-background text-foreground placeholder:text-muted-foreground"
                   id="description"
                   placeholder="Payment for..."
                   value={form.description}
